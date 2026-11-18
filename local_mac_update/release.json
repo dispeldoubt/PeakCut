@@ -1,0 +1,12 @@
+{
+  "files": {
+    "manifest.json": "eef1b39d23fda65d70ef57f1d64c5e6799583932fe87e51a132191629ee8fde4",
+    "native_discovery.py": "4844a0baa03efcbebf8854d54f2bb5af80642c940bf970da0d5043e122b1d237",
+    "native_health.py": "da72001f6de825ff2fc07620f62e2bf51dc741b4f172a12fd38e1f22b7369fc1",
+    "native_maintenance.py": "224ad6a0ccd5f6703829d94fd86e3abd2066513322a5cea6bde58dc1a184d787",
+    "native_runtime.py": "c90617c555c0907bfe60045f6b92da0e108108c61dfc6765b2ba20ddaa557bb0",
+    "native_watchdog.py": "b1b0993562f1be1ce75bc937ade8969dfeba7c0d49697cfb664948235b447e74",
+    "unified_publisher.py": "f9659e04b4e9f16bd69fcdbd3623ae4a12c598ab7595e33f433b8efb5d977494",
+    "update_live.py": "024257dc528892d58d939df809738f6e46619e9ef9dc57119167b545c5ef1514"
+  }
+}
