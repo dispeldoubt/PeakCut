@@ -66,6 +66,13 @@ class DiscoveryTests(unittest.TestCase):
         with self.assertRaises(ValueError):parse(data,[])
         with self.assertRaises(ValueError):parse({'errors':[{'message':'unavailable'}]},[])
 
+    def test_priority_creators_are_excluded_unless_they_are_in_gta_vi(self):
+        data=response()
+        data['data']['p0']=person(PRIMARY[0],game='another-game')
+        selected,_=parse(data,[])
+        self.assertNotIn(PRIMARY[0],[x['login'] for x in selected])
+        self.assertIn(PRIMARY[1],[x['login'] for x in selected])
+
     def test_registration_is_idempotent_and_keeps_expected_clip_settings(self):
         self.d.initialize();self.d.initialize()
         self.assertEqual(len(self.creators.rows),2)
@@ -93,7 +100,7 @@ class DiscoveryTests(unittest.TestCase):
             def result(self):raise ValueError('no data')
         self.d.future=Failed();self.d.pool=N();self.d.at=0
         self.d.tick()
-        self.assertEqual(self.d.selected,list(PRIMARY))
+        self.assertEqual(self.d.selected,[])
         self.assertIsNotNone(self.d.error)
         self.assertEqual(self.creators.rows,[])
 

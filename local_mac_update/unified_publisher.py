@@ -157,6 +157,13 @@ class Publisher:
             if not job or not clip or clip.get("status") != "done" or job.get("kind") != "live" or not channel(job):
                 self.save_post(p, status="cancelled", error="The selected live clip is no longer available.")
                 return
+            if not job.get("gta_vi_verified"):
+                self.save_post(p, status="cancelled", error="Excluded: this clip was not captured under the GTA VI-only policy.")
+                return
+            if float(clip.get("end") or 0) > float(job.get("gta_vi_safe_until") or 0):
+                self.save_post(p, status="scheduled", due_at=time.time()+30,
+                               error="Waiting for GTA VI category confirmation covering the clip.")
+                return
             path, state = self.prepare(p, job, clip)
             if state.get("status") == "published":
                 self.save_post(p, status="posted", posted_at=state["published_at"], remote_id=state.get("post_id", ""),
@@ -223,7 +230,7 @@ class Publisher:
                 for creator in m.creators.all_creators():
                     ch = channel({"source": {"url": (creator.get("channels") or {}).get("twitch") or creator.get("channel")}})
                     if ch:
-                        m.creators.update(creator["id"], {"accounts": [ACCOUNT_ID], "autopost": True, "auto_watch": ch in PRIMARY,
+                        m.creators.update(creator["id"], {"accounts": [ACCOUNT_ID], "autopost": True, "auto_watch": False,
                             "post_min_score": 70, "post_gap_min": GAP // 60, "daily_cap": min(50, LIMIT), "live_per_hour": 3, "min_len": 30, "max_len": 60, "post_footer": "Source: twitch.tv/" + ch})
                 for p in m.posting._mine():
                     if p.get("account") == ACCOUNT_ID and p.get("status") == "posting":
@@ -240,7 +247,7 @@ class Publisher:
                     self.save_post(p, due_at=due, error=None)
                 m.posting._save()
                 for job in m.jobs.list_jobs():
-                    if job.get("kind") == "live" and channel(job):
+                    if job.get("kind") == "live" and channel(job) and job.get("gta_vi_verified"):
                         for clip in job.get("clips", []):
                             if clip.get("status") == "done" and clip.get("judges") and clip.get("score", 0) >= 70 and time.time() - clip.get("made_at", 0) < CANDIDATE_TTL:
                                 m.posting.enqueue(job, clip, [ACCOUNT_ID])

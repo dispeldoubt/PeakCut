@@ -5,7 +5,6 @@ import shutil
 import threading
 import time
 
-import psutil
 from unified_publisher import LIMIT, GAP
 
 CHANNELS = {"jynxzi", "zackrawrr"}
@@ -27,12 +26,12 @@ def attach_health(server, live, jobs, load, config):
     @server.app.get("/api/local-health")
     def local_health():
         return {"pid": os.getpid(), "checked_at": time.time(), "load": load.state(),
-                "publisher": "zernio-native-queue", "recovery_version": 2,
+                "publisher": "zernio-native-queue", "recovery_version": 3, "gta_vi_only": True,
                 "published_copy_retention_hours": 6, "new_clip_seconds": [30, 60], "daily_cap": LIMIT, "rolling_hours": 24, "gap_minutes": GAP // 60,
                 "live_poll_seconds": 20, "capture_stall_seconds": 120,
                 "live_monitor": live.local_watchdog.monitoring(),
                 "automatic_discovery": live.local_watchdog.discovery.status(),
-                "posting_paused": server.accounts.settings()["paused"],
+                "posting_paused": server.accounts.settings()["paused"] or (live.local_watchdog.discovery.private/'PAUSE').exists(),
                 "asr_model": config.ASR_MODEL_NAME, "recording_limit": config.MAX_LIVE_TOTAL,
                 "pending_live_tasks": jobs._live_q.qsize(),
                 "recordings": [{**session_snapshot(s), **live.local_watchdog.snapshot(s)} for s in live.active_mine()]}

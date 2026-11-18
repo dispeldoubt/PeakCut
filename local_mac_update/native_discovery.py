@@ -1,6 +1,7 @@
 """Select two live Twitch sources, preferring explicit priorities over directory discovery."""
 from concurrent.futures import ThreadPoolExecutor
 import re
+import shutil
 import time
 
 import httpx
@@ -40,9 +41,9 @@ def parse(data, current):
         if LOGIN.fullmatch(login):
             states[login] = {'live':live,'viewers':stream.get('viewersCount'), 'title':str(stream.get('title') or '')[:140],
                              'started':None, 'embed':login}
-        # Explicitly requested creators are allowed regardless of current game; discovered sources must stay in GTA VI.
+        # Every source, including a priority creator, must currently be in the exact GTA VI category.
         in_game = (stream.get('game') or {}).get('id') == game.get('id')
-        if live and (key.startswith('p') or in_game):
+        if live and in_game:
             value = clean_stream(login,user.get('displayName'),stream)
             if value:
                 available[login] = value
@@ -72,7 +73,7 @@ def parse(data, current):
 class Discovery:
     def __init__(self, modules, private, clock=time.monotonic):
         self.m, self.private, self.clock = modules, private, clock
-        self.selected = list(PRIMARY)
+        self.selected = []
         self.future, self.at, self.last_success, self.error = None, -1000, None, None
         self.pool = None
         registry = private/'managed-twitch-channels.json'
@@ -103,6 +104,26 @@ class Discovery:
     def initialize(self):
         for login in PRIMARY:
             self.ensure(login)
+        # Retire the two test profiles without erasing their publication ledgers or local job files.
+        for creator in self.m.creators.all_creators():
+            if channel({'source':{'url':creator.get('channel')}}) not in {'jynxzi','zackrawrr'}:
+                continue
+            self.m.creators.update(creator['id'],{'auto_watch':False,'autopost':False,'accounts':[]})
+            source = self.m.creators.root(creator['id'])/'creator.json'
+            archive = self.private/'retired-creators'
+            archive.mkdir(parents=True,exist_ok=True,mode=0o700)
+            destination = archive/(creator['id']+'.json')
+            if source.exists():
+                if not destination.exists():
+                    shutil.copy2(source,destination)
+                    destination.chmod(0o600)
+                source.unlink()
+            with self.m.creators._lock:
+                self.m.creators._mine().pop(creator['id'],None)
+            self.m.ctx.bump()
+
+    def verified(self, login):
+        return login in self.selected and self.last_success is not None and time.time()-self.last_success < 90
 
     def fetch(self, selected):
         active = (selected+list(PRIMARY))[:2]
@@ -128,6 +149,10 @@ class Discovery:
         self.selected = desired
         for session in self.m.live.active_mine():
             login = channel(session.job)
+            if login in desired and session.job.get('gta_vi_verified'):
+                with session.lock:
+                    session.job['gta_vi_safe_until'] = session.samples/16000.0
+                self.m.jobs.save(session.job)
             if desired and login and login not in desired:
                 session.stop('Automatic GTA VI selection: switching to a priority or live gameplay creator.')
         for login,state in states.items():

@@ -39,7 +39,7 @@ class UpdateTests(unittest.TestCase):
             return 0
         def health():
             if not self.bootstraps:return {'pid':12,'daily_cap':10,'gap_minutes':60}
-            return {'pid':13,'recovery_version':2,'gap_minutes':10,'daily_cap':100,'published_copy_retention_hours':6}
+            return {'pid':13,'recovery_version':3,'gta_vi_only':True,'gap_minutes':10,'daily_cap':100,'published_copy_retention_hours':6}
         self.patches=[patch.object(u,'ROOT',self.root),patch.object(u,'PRIVATE',self.private),patch.object(u,'PACKAGE',self.package),
                       patch.object(u,'PLIST',self.plist),patch.object(u,'MANIFEST_SHA',hashlib.sha256(manifest).hexdigest()),
                       patch.object(u.sys,'platform','darwin'),patch.object(u.sys,'prefix',str(self.root/'.venv')),
@@ -91,6 +91,18 @@ class UpdateTests(unittest.TestCase):
         with self.assertRaises(SystemExit):self.run_update()
         self.assertEqual((self.root/'native_runtime.py').read_text(),'user_change=1')
         self.assertEqual(self.commands,[])
+
+    def test_resume_flag_is_applied_only_after_healthy_gta_startup(self):
+        (self.private/'PAUSE').touch()
+        with patch.object(sys,'argv',['update_live.py','--resume-gta-only']):
+            self.run_update()
+        self.assertFalse((self.private/'PAUSE').exists())
+
+    def test_failed_update_keeps_publishing_paused(self):
+        (self.private/'PAUSE').touch();self.fail_new=True
+        with patch.object(sys,'argv',['update_live.py','--resume-gta-only']),self.assertRaises(SystemExit):
+            self.run_update()
+        self.assertTrue((self.private/'PAUSE').exists())
 
 
 if __name__=='__main__':unittest.main()

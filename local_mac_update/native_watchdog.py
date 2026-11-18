@@ -131,8 +131,12 @@ class LiveWatchdog:
         original_posting_start = m.posting.start
         def posting_start():
             if watchdog.discovery is not None:
-                watchdog.discovery.initialize()
-            result = original_posting_start()
+                # Startup callbacks have no request context. Bind the local owner before touching profiles.
+                with m.ctx.as_user(m.auth.local_user().id):
+                    watchdog.discovery.initialize()
+                    result = original_posting_start()
+            else:
+                result = original_posting_start()
             watchdog.ready.set()
             return result
         m.posting.start = posting_start
@@ -142,7 +146,14 @@ class LiveWatchdog:
             login = channel({'source':{'url':url or creator.get('channel')}})
             if watchdog.discovery is not None and login and login not in watchdog.discovery.selected:
                 raise ValueError('This creator is outside the two currently selected recording slots.')
-            return original_session_start(creator, url)
+            if watchdog.discovery is not None and not watchdog.discovery.verified(login):
+                raise ValueError('Waiting for a fresh GTA VI category check before recording.')
+            job = original_session_start(creator, url)
+            if watchdog.discovery is not None:
+                job['gta_vi_verified'] = True
+                job['gta_vi_safe_until'] = 0.0
+                m.jobs.save(job)
+            return job
         m.live.start_session = start_session
         original_add_clip = m.live.Session._add_clip
         def add_clip(session, clip):

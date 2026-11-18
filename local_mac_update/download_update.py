@@ -11,15 +11,17 @@ from concurrent.futures import ThreadPoolExecutor
 
 import httpx
 
-RELEASE_SHA = '9434a70f73bad57f80a70c22c1d101c0c41745ed4c3f87c38756df2d96948e61'
+RELEASE_SHA = '4d29dbd65afa3fbec0f2625373bc136d60887229d69be040c3bfa73b38733065'
 REPOSITORY = 'dispeldoubt/PeakCut'
 PREFIX = 'local_mac_update'
 
 
 def main():
     os.umask(0o077)
-    if len(sys.argv) != 2 or not re.fullmatch(r'[0-9a-f]{40}',sys.argv[1]):
+    if len(sys.argv) not in (2,3) or not re.fullmatch(r'[0-9a-f]{40}',sys.argv[1]):
         raise SystemExit('Provide the exact published update commit.')
+    if len(sys.argv)==3 and sys.argv[2]!='--resume-gta-only':
+        raise SystemExit('Unsupported update option.')
     revision = sys.argv[1]
     base = 'https://raw.githubusercontent.com/'+REPOSITORY+'/'+revision+'/'+PREFIX+'/'
     package = Path.home()/'Downloads'/('peakcut-update-'+revision[:12])
@@ -54,7 +56,8 @@ def main():
         finally:
             Path(temporary).unlink(missing_ok=True)
     print('VERIFIED: complete update fetched directly from your GitHub fork.',flush=True)
-    result=subprocess.run([sys.executable,str(package/'update_live.py')],cwd=package)
+    options=['--resume-gta-only'] if '--resume-gta-only' in sys.argv else []
+    result=subprocess.run([sys.executable,str(package/'update_live.py'),*options],cwd=package)
     raise SystemExit(result.returncode)
 
 

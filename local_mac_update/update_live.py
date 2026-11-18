@@ -20,7 +20,7 @@ LABEL = 'com.twitchpilot.peakcut'
 PLIST = Path.home() / 'Library/LaunchAgents' / (LABEL + '.plist')
 PACKAGE = Path(__file__).resolve().parent
 # Populated when this reviewed package is built.
-MANIFEST_SHA = 'eef1b39d23fda65d70ef57f1d64c5e6799583932fe87e51a132191629ee8fde4'
+MANIFEST_SHA = '2a1cbedaf0ce1cf8e408fa181e5b7d2651acc398f0105a86c0fe98be1078b837'
 NAMES = {'native_watchdog.py', 'native_runtime.py', 'unified_publisher.py', 'native_health.py', 'native_maintenance.py', 'native_discovery.py'}
 
 
@@ -40,7 +40,7 @@ def health():
 
 
 def updated(row):
-    return (row.get('recovery_version') == 2 and row.get('gap_minutes') == 10
+    return (row.get('recovery_version') == 3 and row.get('gta_vi_only') and row.get('gap_minutes') == 10
             and row.get('daily_cap') == 100 and row.get('published_copy_retention_hours') == 6)
 
 
@@ -153,6 +153,12 @@ def install():
                         print('New highlights: 30-60 seconds, up to 3 per creator per hour; original capture quality and current AI models retained.')
                         print('Instagram: 10-minute minimum gap; 100 posts per rolling 24 hours maximum.')
                         print('Retention: published local copies 6 hours; unposted candidates 24 hours; history retained.')
+                        if '--resume-gta-only' in sys.argv:
+                            # The caller confirmed the Instagram cleanup. Resume only after verified strict-policy startup.
+                            (PRIVATE/'PAUSE').unlink(missing_ok=True)
+                            print('GTA VI-only publishing resumed after healthy startup.')
+                        elif row.get('posting_paused'):
+                            print('Publishing remains PAUSED while Instagram test posts are removed. Capture can continue.')
                         print('Dashboard: http://127.0.0.1:8766/app')
                         print('Backup:',backup)
                         return

@@ -5,7 +5,7 @@ It adds capture recovery and automatic Twitch creator selection without changing
 
 ## Source selection
 
-- Prioritize xQc and TypicalGamer when they are live.
+- Prioritize xQc and TypicalGamer only while Twitch reports them in the exact GTA VI category.
 - Fill a free slot from the English-language Grand Theft Auto VI category.
 - Register a selected creator automatically with the existing clipping and publishing settings.
 - Keep an existing GTA VI source when only viewer rankings change; record at most two sources.
@@ -14,8 +14,11 @@ It adds capture recovery and automatic Twitch creator selection without changing
   This is not an official Helix integration; the website endpoint can change or become unavailable.
 - No extra Twitch credentials or paid services are required for this discovery mode.
 
-Explicit priority creators are recorded regardless of their current game. Discovered fallback creators
-are selected from the exact GTA VI category and its English directory filter.
+Priority creators and discovered fallbacks must all pass the exact GTA VI category check. Fallbacks
+also pass the English directory filter. Capture waits for the initial successful category check.
+Publishing waits for category confirmation covering a clip's end; old unverified test jobs are excluded.
+Jynxzi and Zackrawrr are retired from the active profile list; their profile metadata is archived privately
+and publication ledgers are retained. No Instagram posts are deleted by this updater.
 Directory classification is supplied by Twitch; it does not verify what a creator is actually showing.
 The operator remains responsible for choosing content they may use.
 
@@ -62,3 +65,18 @@ python -m unittest discover -s tests -v
 
 These tests mock processes and services. They cover source selection, registration, failed lookups,
 capture recovery, update integrity and rollback without publishing to Instagram.
+
+## Startup context repair and local access
+
+Registration runs inside the local owner's context, including the actual server startup callback.
+The real-startup regression test uses isolated data and suppresses only background workers and network effects.
+For that test, the parent PeakCut checkout and its Python dependencies must be available.
+
+The optional `--resume-gta-only` flag is passed through the downloader to the installer. It removes the local
+posting pause only after a new PID reports a healthy strict-GTA configuration. Failed updates retain the pause.
+Use it only after the operator confirms the Instagram profile cleanup. Zernio cannot delete published Instagram
+posts: https://docs.zernio.com/posts/unpublish-post
+
+To work directly on the Mac, open the local project in a local VS Code window and use the official Codex
+extension with local execution. A Codespaces or cloud session has its own terminal and cannot automatically
+control the Mac. Keep credential file contents out of chat and version control.
